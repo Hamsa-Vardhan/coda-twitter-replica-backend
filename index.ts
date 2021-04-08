@@ -17,6 +17,8 @@ const twit = new Twit({
   timeout_ms: 60 * 1000,
 });
 
+app.get("/", (_, res) => res.send("app is working fine..."));
+
 app.get("/search", async (req: express.Request, res: express.Response) => {
   const searchedQuery = req.query.term as string;
   const count = Number(req.query.count);
