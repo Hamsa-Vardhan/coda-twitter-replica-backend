@@ -1,7 +1,7 @@
-import * as express from "express";
+import express from "express";
 import { json as jsonParser } from "body-parser";
-import * as Twit from "twit";
-import * as cors from "cors";
+import Twit from "twit";
+import cors from "cors";
 require("dotenv").config();
 
 const app = express();
@@ -22,20 +22,48 @@ app.get("/", (_, res) => res.send("app is working fine..."));
 app.get("/search", async (req: express.Request, res: express.Response) => {
   const searchedQuery = req.query.term as string;
   const count = Number(req.query.count);
-  const { data: tweets } = await twit.get("search/tweets", {
-    q: searchedQuery || "a",
-    count: isNaN(count) ? 10 : count,
-  });
-  res.json(tweets["statuses"]);
+  try {
+    const { data: tweets } = await twit.get("search/tweets", {
+      q: searchedQuery || "a",
+      count: isNaN(count) ? 10 : count,
+    });
+    res.json(tweets["statuses"]);
+  } catch (error) {
+    res.status(400).json(error);
+  }
 });
 
 app.get("/home", async (req, res) => {
   const count = Number(req.query.count);
-  const { data: timeline } = await twit.get(`statuses/home_timeline`, {
-    tweet_mode: "extended",
-    count: isNaN(count) ? 10 : count,
-  });
-  res.json(timeline);
+  try {
+    const { data: timeline } = await twit.get(`statuses/home_timeline`, {
+      tweet_mode: "extended",
+      count: isNaN(count) ? 10 : count,
+    });
+    res.json(timeline);
+  } catch (error) {
+    res.status(400).json(error);
+  }
+});
+
+app.get("/available-trends", async (_, res) => {
+  try {
+    res.json((await twit.get("trends/available")).data);
+  } catch (error) {
+    res.status(400).json(error);
+  }
+});
+
+app.get("/trends", async (req, res) => {
+  const id = req.query.id;
+  try {
+    const { data } = await twit.get("trends/place", {
+      id: (id as string) || "1",
+    });
+    res.json(data);
+  } catch (error) {
+    res.status(400).json(error);
+  }
 });
 
 app.listen(port, () => console.log(`listening at http://localhost:${port}`));
