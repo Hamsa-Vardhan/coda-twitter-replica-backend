@@ -2,6 +2,7 @@ import express from "express";
 import { json as jsonParser } from "body-parser";
 import Twit from "twit";
 import cors from "cors";
+import { join } from "path";
 require("dotenv").config();
 
 const app = express();
@@ -17,7 +18,7 @@ const twit = new Twit({
   timeout_ms: 60 * 1000,
 });
 
-app.get("/", (_, res) => res.send("app is working fine..."));
+app.get("/", (_, res) => res.sendFile(join(__dirname, "index.html")));
 
 app.get("/search", async (req: express.Request, res: express.Response) => {
   const searchedQuery = req.query.term as string;

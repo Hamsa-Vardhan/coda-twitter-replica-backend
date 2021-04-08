@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      i {
+        color: rgb(250, 57, 57);
+        font-size: 1.2rem;
+      }
+      b {
+        color: rgb(39, 163, 39);
+        font-size: 1.5rem;
+      }
+      span {
+        font-style: oblique;
+        color: royalblue;
+      }
+    </style>
+    <title>Twitter Replica Docs</title>
+  </head>
+  <body>
+    <h1>End Points <span> all are get requests </span></h1>
+    <div>
+      <h2 class="title"><code>/home :</code></h2>
+      <div>
+        <b class="subtitle">query Params :</b>
+        <ul>
+          <li><i>count</i> : if not provided default is used i.e 10</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <h2 class="title"><code>/search :</code></h2>
+      <div>
+        <b class="subtitle">query Params :</b>
+        <ul>
+          <li><i>count</i> : default is 10</li>
+          <li><i>term</i> : search word used to search default is "a"</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <h2 class="title"><code>/available-trends :</code></h2>
+      <b class="subtitle">no query Params</b>
+    </div>
+    <div>
+      <h2 class="title"><code>/trends</code></h2>
+      <div>
+        <b class="subtitle">query Params</b>
+        <ul>
+          <li>
+            <i>id</i> : woeid in available trends is the id , default is 1
+          </li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>
