@@ -67,20 +67,32 @@ app.get("/trends", async (req, res) => {
   }
 });
 
+app.get("/randIds", async (req, res) => {
+  const count = Number(req.query.count);
+  try {
+    res.json(
+      ((await twit.get("trends/available")).data as object[])
+        .sort(() => 0.5 - Math.random())
+        .slice(0, !isNaN(count) ? count : 10)
+        .map((el) => el["woeid"])
+    );
+  } catch (error) {
+    res.status(400).json(error);
+  }
+});
+
 app.get("/moreTrends", async (req, res) => {
   const count = Number(req.query.count);
-  const out = [];
   try {
-    ((await twit.get("trends/available")).data as object[])
+    const ids = ((await twit.get("trends/available")).data as object[])
       .sort(() => 0.5 - Math.random())
       .slice(0, !isNaN(count) ? count : 10)
-      .forEach(async (el) => {
-        const { data } = await twit.get("trends/place", {
-          id: el["woeid"],
-        });
-        out.push(data);
-      });
-    res.json(out);
+      .map((el) => el["woeid"]);
+    res.json(
+      await Promise.all(
+        ids.map(async (id) => (await twit.get("trends/place", { id })).data)
+      )
+    );
   } catch (error) {
     res.status(400).json(error);
   }
