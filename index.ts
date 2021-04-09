@@ -67,4 +67,23 @@ app.get("/trends", async (req, res) => {
   }
 });
 
+app.get("/moreTrends", async (req, res) => {
+  const count = Number(req.query.count);
+  const out = [];
+  try {
+    ((await twit.get("trends/available")).data as object[])
+      .sort(() => 0.5 - Math.random())
+      .slice(0, !isNaN(count) ? count : 10)
+      .forEach(async (el) => {
+        const { data } = await twit.get("trends/place", {
+          id: el["woeid"],
+        });
+        out.push(data);
+      });
+    res.json(out);
+  } catch (error) {
+    res.status(400).json(error);
+  }
+});
+
 app.listen(port, () => console.log(`listening at http://localhost:${port}`));
