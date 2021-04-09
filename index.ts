@@ -30,7 +30,7 @@ app.get("/search", async (req: express.Request, res: express.Response) => {
     });
     res.json(tweets["statuses"]);
   } catch (error) {
-    res.status(400).json(error);
+    res.status(404).json(error);
   }
 });
 
@@ -43,7 +43,7 @@ app.get("/home", async (req, res) => {
     });
     res.json(timeline);
   } catch (error) {
-    res.status(400).json(error);
+    res.status(404).json(error);
   }
 });
 
@@ -51,19 +51,49 @@ app.get("/available-trends", async (_, res) => {
   try {
     res.json((await twit.get("trends/available")).data);
   } catch (error) {
-    res.status(400).json(error);
+    res.status(404).json(error);
+  }
+});
+
+app.get("/available-countries", async (_, res) => {
+  try {
+    res.json([
+      ...new Set(
+        ((await twit.get("trends/available")).data as Object[]).map(
+          (el) => el["country"]
+        )
+      ),
+    ]);
+  } catch (error) {
+    res.status(404).json(error);
   }
 });
 
 app.get("/trends", async (req, res) => {
-  const id = req.query.id;
+  const id = req.query.id as string;
+  const country = req.query.country as string;
   try {
-    const { data } = await twit.get("trends/place", {
-      id: (id as string) || "1",
-    });
-    res.json(data);
+    if (id) {
+      const { data } = await twit.get("trends/place", {
+        id: id,
+      });
+      res.json(data);
+    } else {
+      const ids = ((await twit.get("trends/available")).data as Object[])
+        .filter((el) =>
+          (el["country"] as string).toLowerCase() === country
+            ? country.toLowerCase()
+            : "india"
+        )
+        .map((el) => el["woeid"]);
+      res.json(
+        await Promise.all(
+          ids.map(async (id) => (await twit.get("trends/place", { id })).data)
+        )
+      );
+    }
   } catch (error) {
-    res.status(400).json(error);
+    res.status(404).json(error);
   }
 });
 
@@ -77,7 +107,7 @@ app.get("/randIds", async (req, res) => {
         .map((el) => el["woeid"])
     );
   } catch (error) {
-    res.status(400).json(error);
+    res.status(404).json(error);
   }
 });
 
@@ -94,7 +124,7 @@ app.get("/moreTrends", async (req, res) => {
       )
     );
   } catch (error) {
-    res.status(400).json(error);
+    res.status(404).json(error);
   }
 });
 
