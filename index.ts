@@ -36,7 +36,6 @@ const cache = {
     data: [],
   },
   trends: {
-    id: NaN,
     country: "india",
     data: [],
   },
@@ -53,20 +52,22 @@ const cache = {
 app.get("/", (_, res) => res.sendFile(join(__dirname, "index.html")));
 
 app.get("/search", async (req: express.Request, res: express.Response) => {
-  const searchedQuery = req.query.term as string;
-  const count = Number(req.query.count);
+  const searchedQuery = (req.query.term as string) || "a";
+  const queryCount = Number(req.query.count);
+  const count = isNaN(queryCount) ? 10 : queryCount;
   if (
-    (cache.search.searchedQuery === searchedQuery ||
-      cache.search.count === count) &&
+    cache.search.searchedQuery === searchedQuery &&
+    cache.search.count === count &&
     cache.search.data.length > 0
   ) {
+    console.log("giving op from cache in search");
     res.json(cache.search.data);
     return;
   }
   try {
     const { data: tweets } = await twit.get("search/tweets", {
-      q: searchedQuery || "a",
-      count: isNaN(count) ? 10 : count,
+      q: searchedQuery,
+      count,
     });
     if (searchedQuery) cache.search.searchedQuery = searchedQuery;
     if (count) cache.search.count = count;
@@ -78,18 +79,21 @@ app.get("/search", async (req: express.Request, res: express.Response) => {
 });
 
 app.get("/home", async (req, res) => {
-  const count = Number(req.query.count);
+  const queryCount = Number(req.query.count);
+  const count = isNaN(queryCount) ? 10 : queryCount;
   if (cache.home.count === count && cache.home.data.length > 0) {
+    console.log("giving op from cache in home");
     res.json(cache.home.data);
     return;
   }
   try {
     const { data: timeline } = await twit.get(`statuses/home_timeline`, {
       tweet_mode: "extended",
-      count: isNaN(count) ? 10 : count,
+      count,
     });
     if (count) cache.home.count = count;
     cache.home.data = timeline as Object[];
+    console.log("added data into home");
     res.json(timeline);
   } catch (error) {
     res.status(404).json(error);
@@ -98,6 +102,7 @@ app.get("/home", async (req, res) => {
 
 app.get("/available-trends", async (_, res) => {
   if (cache.availableTrends.data.length > 0) {
+    console.log("giving op from cache in available-trends");
     res.json(cache.availableTrends.data);
     return;
   }
@@ -112,15 +117,17 @@ app.get("/available-trends", async (_, res) => {
 
 app.get("/available-countries", async (_, res) => {
   if (cache.availableCountries.data.length > 0) {
+    console.log("giving op from cache in available-countries");
     res.json(cache.availableCountries.data);
     return;
   }
   try {
     const data = [
       ...new Set(
-        ((await twit.get("trends/available")).data as Object[]).map(
-          (el) => el["country"]
-        )
+        ((await twit.get("trends/available")).data as Object[]).map((el) => ({
+          country: el["country"],
+          id: el["woeid"],
+        }))
       ),
     ];
     cache.availableCountries.data = data;
@@ -131,42 +138,66 @@ app.get("/available-countries", async (_, res) => {
 });
 
 app.get("/trends", async (req, res) => {
-  const id = req.query.id as string;
-  const country = req.query.country as string;
-  if (
-    cache.trends.id === Number(id) &&
-    cache.trends.country.toLowerCase() === country.toLowerCase() &&
-    cache.trends.data.length > 0
-  )
-    try {
-      if (id) {
-        const { data } = await twit.get("trends/place", {
-          id: id,
-        });
-        res.json(data);
-      } else {
-        const ids = ((await twit.get("trends/available")).data as Object[])
-          .filter((el) =>
-            (el["country"] as string).toLowerCase() === country
-              ? country.toLowerCase()
-              : "india"
-          )
-          .map((el) => el["woeid"]);
-        const data = await Promise.all(
-          ids.map(async (id) => (await twit.get("trends/place", { id })).data)
-        );
-        if (country) cache.trends.country = country;
-        cache.trends.data = data;
-        res.json(data);
-      }
-    } catch (error) {
-      res.status(404).json(error);
-    }
+  const country = (req.query.country as string) || "india";
+  if (country === cache.trends.country && cache.trends.data.length > 0) {
+    console.log("giving op from cache in trends");
+    res.json(cache.trends.data);
+    return;
+  }
+  try {
+    const ids = ((await twit.get("trends/available")).data as Object[])
+      .filter(
+        (el) =>
+          (el["country"] as string).toLowerCase() === country.toLowerCase()
+      )
+      .map((el) => el["woeid"]);
+    const data = await Promise.all(
+      ids.map(async (id) => (await twit.get("trends/place", { id })).data)
+    );
+    cache.trends = {
+      country,
+      data,
+    };
+    res.json(data);
+  } catch (error) {
+    res.status(404).json(error);
+  }
 });
+
+// app.get("/trends", async (req, res) => {
+//   const id = req.query.id as string;
+//   const country = (req.query.country as string) || "india";
+//   if (
+//     cache.trends.id === Number(id) &&
+//     cache.trends.country.toLowerCase() === country.toLowerCase() &&
+//     cache.trends.data.length > 0
+//   )
+//     try {
+//       if (id) {
+//         const { data } = await twit.get("trends/place", {
+//           id: id,
+//         });
+//         res.json(data);
+//       } else {
+//         const ids = ((await twit.get("trends/available")).data as Object[])
+//           .filter((el) => (el["country"] as string).toLowerCase() === country)
+//           .map((el) => el["woeid"]);
+//         const data = await Promise.all(
+//           ids.map(async (id) => (await twit.get("trends/place", { id })).data)
+//         );
+//         if (country) cache.trends.country = country;
+//         cache.trends.data = data;
+//         res.json(data);
+//       }
+//     } catch (error) {
+//       res.status(404).json(error);
+//     }
+// });
 
 app.get("/randIds", async (req, res) => {
   const count = !isNaN(Number(req.query.count)) ? Number(req.query.count) : 10;
   if (cache.randIds.count === count && cache.randIds.data.length > 0) {
+    console.log("giving op from cache in randIds");
     res.json(cache.randIds.data);
   }
   try {
@@ -184,6 +215,7 @@ app.get("/randIds", async (req, res) => {
 app.get("/moreTrends", async (req, res) => {
   const count = !isNaN(Number(req.query.count)) ? Number(req.query.count) : 10;
   if (cache.randIds.count === count && cache.randIds.data.length > 0) {
+    console.log("giving op from cache in moreTrends");
     res.json(cache.randIds.data);
   }
   try {
@@ -191,11 +223,11 @@ app.get("/moreTrends", async (req, res) => {
       .sort(() => 0.5 - Math.random())
       .slice(0, count)
       .map((el) => el["woeid"]);
-    res.json(
-      await Promise.all(
-        ids.map(async (id) => (await twit.get("trends/place", { id })).data)
-      )
+    const data = await Promise.all(
+      ids.map(async (id) => (await twit.get("trends/place", { id })).data)
     );
+    if (count !== cache.randIds.count) cache.randIds.count = count;
+    res.json(data);
   } catch (error) {
     res.status(404).json(error);
   }
